@@ -1,0 +1,3 @@
+[submodule "third-party/rocksdb"]
+	path = third-party/rocksdb
+	url = https://github.com/tikv/rocksdb.git
