@@ -579,6 +579,8 @@ Status TitanDBImpl::Put(const rocksdb::WriteOptions& options,
   if (HasBGError()) return GetBGError();
   while (db_options_.block_write_size > 0 && block_for_size_.load()) {
     std::cerr << "blocked by size_cv\n";
+    TITAN_LOG_INFO(db_options_.info_log,
+                     "GC Stall writes with size_cv.");
     {
       uint32_t cf_id = column_family->GetID();
       auto bs = blob_file_set_->GetBlobStorage(cf_id).lock();
@@ -590,6 +592,8 @@ Status TitanDBImpl::Put(const rocksdb::WriteOptions& options,
     if (block_for_size_.load()) {
       size_cv_.Wait();
       std::cerr << "wait done\n";
+      TITAN_LOG_INFO(db_options_.info_log,
+                     "GC Stall wait done.");
     }
   }
   return HasBGError() ? GetBGError()
@@ -1458,8 +1462,16 @@ void TitanDBImpl::OnCompactionCompleted(
     GetIntProperty("rocksdb.titandb.live-blob-file-size", &total_size);
     if (db_options_.block_write_size > 0) {
       if (total_size > db_options_.block_write_size) {
+        TITAN_LOG_INFO(
+                db_options_.info_log,
+                "GC Stall with total_size %" PRIu64,
+                total_size);
         block_for_size_.store(true);
       } else if (block_for_size_.load()) {
+        TITAN_LOG_INFO(
+                db_options_.info_log,
+                "Remove GC Stall with total_size %" PRIu64,
+                total_size);
         block_for_size_.store(false);
         size_cv_.SignalAll();
       }

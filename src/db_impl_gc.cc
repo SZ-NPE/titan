@@ -222,6 +222,10 @@ Status TitanDBImpl::BackgroundGC(LogBuffer* log_buffer,
     GetIntProperty("rocksdb.titandb.live-blob-size", &live_size);
     if (block_for_size_.load() && total_size < db_options_.block_write_size) {
       MutexLock l(&size_mutex_);
+      TITAN_LOG_INFO(
+                db_options_.info_log,
+                "Remove GC Stall with total_size %" PRIu64,
+                total_size);
       block_for_size_.store(false);
       size_cv_.SignalAll();
     }
