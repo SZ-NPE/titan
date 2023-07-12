@@ -577,24 +577,28 @@ Status TitanDBImpl::Put(const rocksdb::WriteOptions& options,
                         const rocksdb::Slice& key,
                         const rocksdb::Slice& value) {
   if (HasBGError()) return GetBGError();
-  while (db_options_.block_write_size > 0 && block_for_size_.load()) {
-    std::cerr << "blocked by size_cv\n";
-    TITAN_LOG_INFO(db_options_.info_log,
-                     "GC Stall writes with size_cv.");
-    {
-      uint32_t cf_id = column_family->GetID();
-      auto bs = blob_file_set_->GetBlobStorage(cf_id).lock();
-      bs->ComputeGCScore();
-      AddToGCQueue(cf_id);
-      MaybeScheduleGC();
-    }
-    MutexLock l(&size_mutex_);
-    if (block_for_size_.load()) {
-      size_cv_.Wait();
-      std::cerr << "wait done\n";
-      TITAN_LOG_INFO(db_options_.info_log,
-                     "GC Stall wait done.");
-    }
+  
+  {
+    MutexLock l(&stats_mutex_);
+    while (db_options_.block_write_size > 0 && block_for_size_.load()) {
+      AtomicTitanStopWatch sw(env_, stall_time);
+      stall_cnt++;
+      std::cerr << "blocked by size_cv\n";
+      TITAN_LOG_INFO(db_options_.info_log, "GC Stall writes with size_cv.");
+      {
+        uint32_t cf_id = column_family->GetID();
+        auto bs = blob_file_set_->GetBlobStorage(cf_id).lock();
+        bs->ComputeGCScore();
+        AddToGCQueue(cf_id);
+        MaybeScheduleGC();
+      }
+      MutexLock sl(&size_mutex_);
+      if (block_for_size_.load()) {
+        size_cv_.Wait();
+        std::cerr << "wait done\n";
+        TITAN_LOG_INFO(db_options_.info_log, "GC Stall wait done.");
+      }
+  }
   }
   return HasBGError() ? GetBGError()
                       : db_->Put(options, column_family, key, value);
@@ -1172,6 +1176,13 @@ bool TitanDBImpl::GetProperty(ColumnFamilyHandle* column_family,
   std::string property_str = property.ToString();
   if (property_str == "Titan.stats") {
     DumpStatsToString(value);
+    if (db_options_.block_write_size > 0) {
+      char log_buffer[2000];
+      snprintf(log_buffer, sizeof(log_buffer),
+               "stall time: %" PRIu64 "\nstall count:%" PRIu64 " \n",
+               stall_time.load(), stall_cnt.load());
+      value->append(log_buffer);
+    }
     return true;
   }
   bool s = false;

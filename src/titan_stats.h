@@ -278,5 +278,18 @@ class TitanStopWatch {
   uint64_t start_;
 };
 
+class AtomicTitanStopWatch {
+ public:
+  AtomicTitanStopWatch(Env* env, std::atomic<uint64_t>& stats)
+      : env_(env), stats_(stats), start_(env_->NowMicros()) {}
+
+  ~AtomicTitanStopWatch() { stats_ += env_->NowMicros() - start_; }
+
+ private:
+  Env* env_;
+  std::atomic<uint64_t>& stats_;
+  uint64_t start_;
+};
+
 }  // namespace titandb
 }  // namespace rocksdb
