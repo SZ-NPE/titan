@@ -24,7 +24,9 @@ std::shared_ptr<Statistics> CreateDBStatistics();
 enum class InternalOpStatsType : int {
   COUNT = 0,
   BYTES_READ,
+  LSM_BYTES_READ,
   BYTES_WRITTEN,
+  LSM_BYTES_WRITTEN,
   IO_BYTES_READ,
   IO_BYTES_WRITTEN,
   INPUT_FILE_NUM,
@@ -97,6 +99,10 @@ class TitanInternalStats {
     stats_[type].store(0, std::memory_order_relaxed);
   }
 
+  uint64_t GetStats(StatsType type) {
+    return stats_[type].load(std::memory_order_relaxed);
+  }
+
   void AddStats(StatsType type, uint64_t value) {
     auto& v = stats_[type];
     v.fetch_add(value, std::memory_order_relaxed);
@@ -112,6 +118,9 @@ class TitanInternalStats {
   }
 
   void DumpAndResetInternalOpStats(LogBuffer* log_buffer);
+  void DumpInternalOpStats(LogBuffer* log_buffer);
+  void DumpInternalOpStats(std::string* value);
+  void DumpInternalStats(std::string* value);
 
   bool GetIntProperty(const Slice& property, uint64_t* value) const;
   bool GetStringProperty(const Slice& property, std::string* value) const;
@@ -209,6 +218,13 @@ inline uint64_t GetAndResetStats(InternalOpStats* stats,
   if (stats != nullptr) {
     return (*stats)[static_cast<int>(type)].exchange(0,
                                                      std::memory_order_relaxed);
+  }
+  return 0;
+}
+
+inline uint64_t DumpStats(InternalOpStats* stats, InternalOpStatsType type) {
+  if (stats != nullptr) {
+    return (*stats)[static_cast<int>(type)].load(std::memory_order_relaxed);
   }
   return 0;
 }

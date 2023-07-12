@@ -364,7 +364,7 @@ Status BlobGCJob::DiscardEntry(const Slice& key, const BlobIndex& blob_index,
     return s;
   }
   // count read bytes for checking LSM entry
-  metrics_.gc_bytes_read += key.size() + index_entry.size();
+  metrics_.lsm_gc_bytes_read += key.size() + index_entry.size();
   if (s.IsNotFound() || !is_blob_index) {
     // Either the key is deleted or updated with a newer version which is
     // inlined in LSM.
@@ -514,7 +514,7 @@ Status BlobGCJob::RewriteValidKeyToLSM() {
       if (new_blob_index.blob_handle.size > 0) {
         // Rewritten as blob record.
         // count written bytes for new blob index.
-        metrics_.gc_bytes_written += write_batch.first.GetDataSize();
+        metrics_.lsm_gc_bytes_written += write_batch.first.GetDataSize();
         metrics_.gc_num_keys_relocated++;
         metrics_.gc_bytes_relocated += write_batch.second.blob_record_size();
       } else {
@@ -535,7 +535,7 @@ Status BlobGCJob::RewriteValidKeyToLSM() {
       break;
     }
     // count read bytes in write callback
-    metrics_.gc_bytes_read += write_batch.second.read_bytes();
+    metrics_.lsm_gc_bytes_read += write_batch.second.read_bytes();
   }
   if (s.IsBusy()) {
     s = Status::OK();
@@ -620,8 +620,12 @@ void BlobGCJob::UpdateInternalOpStats() {
   AddStats(internal_op_stats, InternalOpStatsType::COUNT);
   AddStats(internal_op_stats, InternalOpStatsType::BYTES_READ,
            metrics_.gc_bytes_read);
+  AddStats(internal_op_stats, InternalOpStatsType::LSM_BYTES_READ,
+           metrics_.lsm_gc_bytes_read);
   AddStats(internal_op_stats, InternalOpStatsType::BYTES_WRITTEN,
            metrics_.gc_bytes_written);
+  AddStats(internal_op_stats, InternalOpStatsType::LSM_BYTES_WRITTEN,
+           metrics_.lsm_gc_bytes_written);
   AddStats(internal_op_stats, InternalOpStatsType::IO_BYTES_READ,
            io_bytes_read_);
   AddStats(internal_op_stats, InternalOpStatsType::IO_BYTES_WRITTEN,

@@ -209,7 +209,7 @@ void TitanTableBuilder::AddBlobResultsToBase(
     } else {
       RecordTick(statistics(stats_), TITAN_BLOB_FILE_BYTES_WRITTEN,
                  ctx->new_blob_index.blob_handle.size);
-      bytes_written_ += ctx->new_blob_index.blob_handle.size;
+      // bytes_written_ += ctx->new_blob_index.blob_handle.size;
       std::string index_value;
       ctx->new_blob_index.EncodeTo(&index_value);
 
@@ -217,6 +217,7 @@ void TitanTableBuilder::AddBlobResultsToBase(
       std::string index_key;
       AppendInternalKey(&index_key, ikey);
       base_builder_->Add(index_key, index_value);
+      lsm_bytes_written_ += index_key.size() + index_value.size();
     }
   }
 }
@@ -369,8 +370,11 @@ void TitanTableBuilder::UpdateInternalOpStats() {
   assert(internal_op_stats != nullptr);
   AddStats(internal_op_stats, InternalOpStatsType::COUNT);
   AddStats(internal_op_stats, InternalOpStatsType::BYTES_READ, bytes_read_);
+  AddStats(internal_op_stats, InternalOpStatsType::LSM_BYTES_READ, lsm_bytes_read_);
   AddStats(internal_op_stats, InternalOpStatsType::BYTES_WRITTEN,
            bytes_written_);
+  AddStats(internal_op_stats, InternalOpStatsType::LSM_BYTES_WRITTEN,
+           lsm_bytes_written_);
   AddStats(internal_op_stats, InternalOpStatsType::IO_BYTES_READ,
            io_bytes_read_);
   AddStats(internal_op_stats, InternalOpStatsType::IO_BYTES_WRITTEN,

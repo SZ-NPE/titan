@@ -203,6 +203,143 @@ void TitanInternalStats::DumpAndResetInternalOpStats(LogBuffer* log_buffer) {
   }
 }
 
+void TitanInternalStats::DumpInternalOpStats(LogBuffer* log_buffer) {
+  constexpr double GB = 1.0 * 1024 * 1024 * 1024;
+  constexpr double SECOND = 1.0 * 1000000;
+  LogToBuffer(log_buffer,
+              "OP           COUNT READ(GB)  LSM_READ(GB)  WRITE(GB)  LSM_WRITE(GB) "
+              "IO_READ(GB)  IO_WRITE(GB) "
+              " FILE_IN FILE_OUT GC_READ(MICROS) GC_UPDATE(MICROS)");
+  LogToBuffer(log_buffer,
+              "----------------------------------------------------------------"
+              "----------------------------------------------------------------"
+              "-----------------");
+  for (int op = 0; op < static_cast<int>(InternalOpType::INTERNAL_OP_ENUM_MAX);
+       op++) {
+    LogToBuffer(
+        log_buffer,
+        "%s %5d %10.1f  %10.1f  %10.1f  %10.1f  %10.1f  %10.1f %10d %10d %10.1f "
+        "%10.1f",
+        internal_op_names[op].c_str(),
+        (int)DumpStats(&internal_op_stats_[op], InternalOpStatsType::COUNT),
+        (double)DumpStats(&internal_op_stats_[op],
+                          InternalOpStatsType::BYTES_READ) /
+            GB,
+        (double)DumpStats(&internal_op_stats_[op],
+                          InternalOpStatsType::LSM_BYTES_READ) /
+            GB,
+        (double)DumpStats(&internal_op_stats_[op],
+                          InternalOpStatsType::BYTES_WRITTEN) /
+            GB,
+        (double)DumpStats(&internal_op_stats_[op],
+                          InternalOpStatsType::LSM_BYTES_WRITTEN) /
+            GB,
+        (double)DumpStats(&internal_op_stats_[op],
+                          InternalOpStatsType::IO_BYTES_READ) /
+            GB,
+        (double)DumpStats(&internal_op_stats_[op],
+                          InternalOpStatsType::IO_BYTES_WRITTEN) /
+            GB,
+        (int)DumpStats(&internal_op_stats_[op],
+                       InternalOpStatsType::INPUT_FILE_NUM),
+        (int)DumpStats(&internal_op_stats_[op],
+                       InternalOpStatsType::OUTPUT_FILE_NUM),
+        (double)DumpStats(&internal_op_stats_[op],
+                          InternalOpStatsType::GC_READ_LSM_MICROS) /
+            SECOND,
+        (double)DumpStats(&internal_op_stats_[op],
+                          InternalOpStatsType::GC_UPDATE_LSM_MICROS) /
+            SECOND);
+  }
+}
+
+void TitanInternalStats::DumpInternalOpStats(std::string* value) {
+  constexpr double GB = 1.0 * 1024 * 1024 * 1024;
+  constexpr double SECOND = 1.0 * 1000000;
+  char log_buffer[2000];
+  snprintf(
+      log_buffer, sizeof(log_buffer),
+      "OP           COUNT READ(GB)  LSM_READ(GB)  WRITE(GB)  LSM_WRITE(GB) "
+      "IO_READ(GB)  IO_WRITE(GB) "
+      " FILE_IN FILE_OUT GC_READ(MICROS) GC_UPDATE(MICROS)\n");
+  value->append(log_buffer);
+  snprintf(log_buffer, sizeof(log_buffer),
+           "----------------------------------------------------------------"
+           "----------------------------------------------------------------"
+           "-----------------\n");
+  value->append(log_buffer);
+  for (int op = 0; op < static_cast<int>(InternalOpType::INTERNAL_OP_ENUM_MAX);
+       op++) {
+    snprintf(
+        log_buffer, sizeof(log_buffer),
+        "%s %5d %10.1f  %10.1f  %10.1f  %10.1f  %10.1f  %10.1f %10d %10d %10.1f "
+        "%10.1f\n",
+        internal_op_names[op].c_str(),
+        (int)DumpStats(&internal_op_stats_[op], InternalOpStatsType::COUNT),
+        (double)DumpStats(&internal_op_stats_[op],
+                          InternalOpStatsType::BYTES_READ) /
+            GB,
+        (double)DumpStats(&internal_op_stats_[op],
+                          InternalOpStatsType::LSM_BYTES_READ) /
+            GB,
+        (double)DumpStats(&internal_op_stats_[op],
+                          InternalOpStatsType::BYTES_WRITTEN) /
+            GB,
+        (double)DumpStats(&internal_op_stats_[op],
+                          InternalOpStatsType::LSM_BYTES_WRITTEN) /
+            GB,
+        (double)DumpStats(&internal_op_stats_[op],
+                          InternalOpStatsType::IO_BYTES_READ) /
+            GB,
+        (double)DumpStats(&internal_op_stats_[op],
+                          InternalOpStatsType::IO_BYTES_WRITTEN) /
+            GB,
+        (int)DumpStats(&internal_op_stats_[op],
+                       InternalOpStatsType::INPUT_FILE_NUM),
+        (int)DumpStats(&internal_op_stats_[op],
+                       InternalOpStatsType::OUTPUT_FILE_NUM),
+        (double)DumpStats(&internal_op_stats_[op],
+                          InternalOpStatsType::GC_READ_LSM_MICROS) /
+            SECOND,
+        (double)DumpStats(&internal_op_stats_[op],
+                          InternalOpStatsType::GC_UPDATE_LSM_MICROS) /
+            SECOND);
+    value->append(log_buffer);
+  }
+}
+void TitanInternalStats::DumpInternalStats(std::string* value) {
+  constexpr double GB = 1.0 * 1024 * 1024 * 1024;
+  constexpr double SECOND = 1.0 * 1000000;
+  char log_buffer[2000];
+  snprintf(log_buffer, sizeof(log_buffer),
+           "----------------------------------------------------------------"
+           "----------------------------------------------------------------"
+           "-----------------\n");
+  value->append(log_buffer);
+
+  snprintf(log_buffer, sizeof(log_buffer),
+           "LIVE_BLOB_SIZE(GB): %.2f"
+           "\nNUM_LIVE_BLOB_FILE: %" PRIu64 
+           "\nNUM_OBSOLETE_BLOB_FILE: %" PRIu64
+           "\nLIVE_BLOB_FILE_SIZE(GB): %.2f "
+           "\nOBSOLETE_BLOB_FILE_SIZE(GB): %.2f "
+           "\nNUM_DISCARDABLE_RATIO_LE0: %" PRIu64
+           "\nNUM_DISCARDABLE_RATIO_LE20: %" PRIu64
+           "\nNUM_DISCARDABLE_RATIO_LE50: %" PRIu64
+           "\nNUM_DISCARDABLE_RATIO_LE80: %" PRIu64
+           "\nNUM_DISCARDABLE_RATIO_LE100: %" PRIu64 "\n",
+           (double)GetStats(LIVE_BLOB_SIZE) / GB, GetStats(NUM_LIVE_BLOB_FILE),
+           GetStats(NUM_OBSOLETE_BLOB_FILE),
+           (double)GetStats(LIVE_BLOB_FILE_SIZE) / GB,
+           (double)GetStats(OBSOLETE_BLOB_FILE_SIZE) / GB,
+           GetStats(NUM_DISCARDABLE_RATIO_LE0),
+           GetStats(NUM_DISCARDABLE_RATIO_LE20),
+           GetStats(NUM_DISCARDABLE_RATIO_LE50),
+           GetStats(NUM_DISCARDABLE_RATIO_LE80),
+           GetStats(NUM_DISCARDABLE_RATIO_LE100));
+  value->append(log_buffer);
+}
+
 void TitanStats::InitializeCF(uint32_t cf_id,
                               std::shared_ptr<BlobStorage> blob_storage) {
   internal_stats_[cf_id] = std::make_shared<TitanInternalStats>(blob_storage);

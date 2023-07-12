@@ -1169,6 +1169,11 @@ TitanDBOptions TitanDBImpl::GetTitanDBOptions() const {
 bool TitanDBImpl::GetProperty(ColumnFamilyHandle* column_family,
                               const Slice& property, std::string* value) {
   assert(column_family != nullptr);
+  std::string property_str = property.ToString();
+  if (property_str == "Titan.stats") {
+    DumpStatsToString(value);
+    return true;
+  }
   bool s = false;
   if (stats_.get() != nullptr) {
     auto stats = stats_->internal_stats(column_family->GetID());
@@ -1526,10 +1531,36 @@ void TitanDBImpl::DumpStats() {
       }
       LogToBuffer(&log_buffer, "Titan internal stats for column family [%s]:",
                   cf.second.name.c_str());
-      internal_stats->DumpAndResetInternalOpStats(&log_buffer);
+      internal_stats->DumpInternalOpStats(&log_buffer);
     }
   }
   log_buffer.FlushBufferToLog();
+}
+
+void TitanDBImpl::DumpStatsToString(std::string* value) {
+  if (stats_ == nullptr) {
+    return;
+  }
+  {
+    MutexLock l(&mutex_);
+    char buf[2000];
+    for (auto& cf : cf_info_) {
+      TitanInternalStats* internal_stats = stats_->internal_stats(cf.first);
+      if (internal_stats == nullptr) {
+        snprintf(buf, sizeof(buf),
+                 "Column family [%s] missing internal stats.\n",
+                 cf.second.name.c_str());
+        value->append(buf);
+        continue;
+      }
+      snprintf(buf, sizeof(buf),
+               "Titan internal stats for column family [%s]:\n",
+               cf.second.name.c_str());
+      value->append(buf);
+      internal_stats->DumpInternalOpStats(value);
+      internal_stats->DumpInternalStats(value);
+    }
+  }
 }
 
 }  // namespace titandb

@@ -66,7 +66,9 @@ class BlobGCJob {
 
   struct {
     uint64_t gc_bytes_read = 0;
+    uint64_t lsm_gc_bytes_read = 0;
     uint64_t gc_bytes_written = 0;
+    uint64_t lsm_gc_bytes_written = 0;
     uint64_t gc_num_keys_overwritten = 0;
     uint64_t gc_bytes_overwritten = 0;
     uint64_t gc_num_keys_relocated = 0;

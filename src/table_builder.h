@@ -106,7 +106,9 @@ class TitanTableBuilder : public TableBuilder {
 
   // counters
   uint64_t bytes_read_ = 0;
+  uint64_t lsm_bytes_read_ = 0;
   uint64_t bytes_written_ = 0;
+  uint64_t lsm_bytes_written_ = 0;
   uint64_t io_bytes_read_ = 0;
   uint64_t io_bytes_written_ = 0;
   uint64_t gc_num_keys_relocated_ = 0;
