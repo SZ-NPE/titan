@@ -348,7 +348,7 @@ class TitanDBImpl : public TitanDB {
 
   std::atomic<uint64_t> stall_cnt{0};
   std::atomic<uint64_t> stall_time{0};
-  mutable port::Mutex stats_mutex_;
+  // mutable port::Mutex stats_mutex_;
 
   std::atomic<bool> block_for_size_{false};
   port::CondVar size_cv_;

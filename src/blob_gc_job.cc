@@ -442,6 +442,7 @@ Status BlobGCJob::InstallOutputBlobFiles() {
     file->FileStateTransit(BlobFileMeta::FileEvent::kGCOutput);
     RecordInHistogram(statistics(stats_), TITAN_GC_OUTPUT_FILE_SIZE,
                       file->file_size());
+    metrics_.file_gc_bytes_written += file->file_size();
     if (!tmp.empty()) {
       tmp.append(" ");
     }
@@ -626,6 +627,8 @@ void BlobGCJob::UpdateInternalOpStats() {
            metrics_.gc_bytes_written);
   AddStats(internal_op_stats, InternalOpStatsType::LSM_BYTES_WRITTEN,
            metrics_.lsm_gc_bytes_written);
+  AddStats(internal_op_stats, InternalOpStatsType::FILE_BYTES_WRITTEN,
+           metrics_.file_gc_bytes_written);
   AddStats(internal_op_stats, InternalOpStatsType::IO_BYTES_READ,
            io_bytes_read_);
   AddStats(internal_op_stats, InternalOpStatsType::IO_BYTES_WRITTEN,

@@ -244,6 +244,7 @@ void TitanTableBuilder::FinishBlobFile() {
           blob_builder_->GetSmallestKey(), blob_builder_->GetLargestKey());
       file->FileStateTransit(BlobFileMeta::FileEvent::kFlushOrCompactionOutput);
       finished_blobs_.push_back({file, std::move(blob_handle_)});
+      file_bytes_written_ += file->file_size();
       // level merge is performed
       if (gc_num_keys_relocated_ != 0) {
         RecordTick(statistics(stats_), TITAN_GC_NUM_NEW_FILES, 1);
@@ -375,6 +376,8 @@ void TitanTableBuilder::UpdateInternalOpStats() {
            bytes_written_);
   AddStats(internal_op_stats, InternalOpStatsType::LSM_BYTES_WRITTEN,
            lsm_bytes_written_);
+  AddStats(internal_op_stats, InternalOpStatsType::FILE_BYTES_WRITTEN,
+           file_bytes_written_);
   AddStats(internal_op_stats, InternalOpStatsType::IO_BYTES_READ,
            io_bytes_read_);
   AddStats(internal_op_stats, InternalOpStatsType::IO_BYTES_WRITTEN,
