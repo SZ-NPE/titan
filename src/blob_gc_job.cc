@@ -147,6 +147,7 @@ Status BlobGCJob::Run() {
 }
 
 Status BlobGCJob::DoRunGC() {
+  TitanStopWatch sw(env_, metrics_.gc_micros);
   Status s;
 
   std::unique_ptr<BlobFileMergeIterator> gc_iter;
@@ -359,7 +360,15 @@ Status BlobGCJob::DiscardEntry(const Slice& key, const BlobIndex& blob_index,
   gopts.column_family = blob_gc_->column_family_handle();
   gopts.value = &index_entry;
   gopts.is_blob_index = &is_blob_index;
+  UpdateIOBytes(prev_bytes_read_, prev_bytes_written_, &io_bytes_read_,
+                &io_bytes_written_);
+  SavePrevIOBytes(&prev_bytes_read_, &prev_bytes_written_);
   Status s = base_db_impl_->GetImpl(ReadOptions(), key, gopts);
+  UpdateIOBytes(prev_bytes_read_, prev_bytes_written_, &io_bytes_read_,
+                &io_bytes_written_);
+  UpdateIOBytes(prev_bytes_read_, prev_bytes_written_, &lookup_io_bytes_read_,
+                &lookup_io_bytes_written_);
+  SavePrevIOBytes(&prev_bytes_read_, &prev_bytes_written_);
   if (!s.ok() && !s.IsNotFound()) {
     return s;
   }
@@ -509,7 +518,15 @@ Status BlobGCJob::RewriteValidKeyToLSM() {
       s = Status::ShutdownInProgress();
       break;
     }
+    UpdateIOBytes(prev_bytes_read_, prev_bytes_written_, &io_bytes_read_,
+                  &io_bytes_written_);
+    SavePrevIOBytes(&prev_bytes_read_, &prev_bytes_written_);
     s = db_impl->WriteWithCallback(wo, &write_batch.first, &write_batch.second);
+    UpdateIOBytes(prev_bytes_read_, prev_bytes_written_, &io_bytes_read_,
+                  &io_bytes_written_);
+    UpdateIOBytes(prev_bytes_read_, prev_bytes_written_,
+                  &writeback_io_bytes_read_, &writeback_io_bytes_written_);
+    SavePrevIOBytes(&prev_bytes_read_, &prev_bytes_written_);
     const auto& new_blob_index = write_batch.second.new_blob_index();
     if (s.ok()) {
       if (new_blob_index.blob_handle.size > 0) {
@@ -631,12 +648,22 @@ void BlobGCJob::UpdateInternalOpStats() {
            metrics_.file_gc_bytes_written);
   AddStats(internal_op_stats, InternalOpStatsType::IO_BYTES_READ,
            io_bytes_read_);
+  AddStats(internal_op_stats, InternalOpStatsType::LOOKUP_IO_BYTES_READ,
+           lookup_io_bytes_read_);
+  AddStats(internal_op_stats, InternalOpStatsType::WRITEBACK_IO_BYTES_READ,
+           writeback_io_bytes_read_);
   AddStats(internal_op_stats, InternalOpStatsType::IO_BYTES_WRITTEN,
            io_bytes_written_);
+  AddStats(internal_op_stats, InternalOpStatsType::LOOKUP_IO_BYTES_WRITTEN,
+           lookup_io_bytes_written_);
+  AddStats(internal_op_stats, InternalOpStatsType::WRITEBACK_IO_BYTES_WRITTEN,
+           writeback_io_bytes_written_);
   AddStats(internal_op_stats, InternalOpStatsType::INPUT_FILE_NUM,
            metrics_.gc_num_files);
   AddStats(internal_op_stats, InternalOpStatsType::OUTPUT_FILE_NUM,
            metrics_.gc_num_new_files);
+  AddStats(internal_op_stats, InternalOpStatsType::GC_MICROS,
+           metrics_.gc_micros);
   AddStats(internal_op_stats, InternalOpStatsType::GC_READ_LSM_MICROS,
            metrics_.gc_read_lsm_micros);
   AddStats(internal_op_stats, InternalOpStatsType::GC_UPDATE_LSM_MICROS,

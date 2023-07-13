@@ -209,9 +209,11 @@ void TitanInternalStats::DumpInternalOpStats(LogBuffer* log_buffer) {
   LogToBuffer(
       log_buffer,
       "OP           COUNT READ(GB)  LSM_READ(GB)  WRITE(GB)  LSM_WRITE(GB)  "
-      "FILE_WRITE(GB)  IO_READ(GB)  IO_WRITE(GB) FILE_IN FILE_OUT GC_READ(s) "
-      "GC_UPDATE(s)");
+      "FILE_WRITE(GB)  IO_READ(GB)  LOOKUP_IO_READ(GB)  WRITEBACK_IO_READ(GB)  "
+      "IO_WRITE(GB)  LOOKUP_IO_WRITE(GB)  WRITEBACK_IO_WRITE(GB)  FILE_IN "
+      "FILE_OUT GC(s) GC_READ(s) GC_UPDATE(s)");
   LogToBuffer(log_buffer,
+              "----------------------------------------------------------------"
               "----------------------------------------------------------------"
               "----------------------------------------------------------------"
               "-----------------");
@@ -219,67 +221,8 @@ void TitanInternalStats::DumpInternalOpStats(LogBuffer* log_buffer) {
        op++) {
     LogToBuffer(
         log_buffer,
-        "%s %5d %10.1f  %10.1f  %10.1f  %10.1f  %10.1f  %10.1f  %10.1f %10d "
-        "%10d %10.1f %10.1f",
-        internal_op_names[op].c_str(),
-        static_cast<int>(
-            DumpStats(&internal_op_stats_[op], InternalOpStatsType::COUNT)),
-        static_cast<double>(DumpStats(&internal_op_stats_[op],
-                                      InternalOpStatsType::BYTES_READ)) /
-            GB,
-        static_cast<double>(DumpStats(&internal_op_stats_[op],
-                                      InternalOpStatsType::LSM_BYTES_READ)) /
-            GB,
-        static_cast<double>(DumpStats(&internal_op_stats_[op],
-                                      InternalOpStatsType::BYTES_WRITTEN)) /
-            GB,
-        static_cast<double>(DumpStats(&internal_op_stats_[op],
-                                      InternalOpStatsType::LSM_BYTES_WRITTEN)) /
-            GB,
-        static_cast<double>(DumpStats(&internal_op_stats_[op],
-                                      InternalOpStatsType::FILE_BYTES_WRITTEN)) /
-            GB,
-        static_cast<double>(DumpStats(&internal_op_stats_[op],
-                                      InternalOpStatsType::IO_BYTES_READ)) /
-            GB,
-        static_cast<double>(DumpStats(&internal_op_stats_[op],
-                                      InternalOpStatsType::IO_BYTES_WRITTEN)) /
-            GB,
-        static_cast<int>(DumpStats(&internal_op_stats_[op],
-                                   InternalOpStatsType::INPUT_FILE_NUM)),
-        static_cast<int>(DumpStats(&internal_op_stats_[op],
-                                   InternalOpStatsType::OUTPUT_FILE_NUM)),
-        static_cast<double>(DumpStats(
-            &internal_op_stats_[op], InternalOpStatsType::GC_READ_LSM_MICROS)) /
-            SECOND,
-        static_cast<double>(
-            DumpStats(&internal_op_stats_[op],
-                      InternalOpStatsType::GC_UPDATE_LSM_MICROS)) /
-            SECOND);
-  }
-}
-
-void TitanInternalStats::DumpInternalOpStats(std::string* value) {
-  constexpr double GB = 1.0 * 1024 * 1024 * 1024;
-  constexpr double SECOND = 1.0 * 1000000;
-  char log_buffer[2000];
-  snprintf(
-      log_buffer, sizeof(log_buffer),
-      "OP           COUNT READ(GB)  LSM_READ(GB)  WRITE(GB)  LSM_WRITE(GB)  "
-      "FILE_WRITE(GB)  IO_READ(GB)  IO_WRITE(GB) FILE_IN FILE_OUT GC_READ(s) "
-      "GC_UPDATE(s)\n");
-  value->append(log_buffer);
-  snprintf(log_buffer, sizeof(log_buffer),
-           "----------------------------------------------------------------"
-           "----------------------------------------------------------------"
-           "-----------------\n");
-  value->append(log_buffer);
-  for (int op = 0; op < static_cast<int>(InternalOpType::INTERNAL_OP_ENUM_MAX);
-       op++) {
-    snprintf(
-        log_buffer, sizeof(log_buffer),
-        "%s %5d %10.1f  %10.1f  %10.1f  %10.1f  %10.1f  %10.1f  %10.1f %10d "
-        "%10d %10.1f %10.1f\n",
+        "%s %5d %10.1f  %10.1f  %10.1f  %10.1f  %10.1f  %10.1f  %10.1f  %10.1f "
+        " %10.1f  %10.1f  %10.1f %10d %10d %10.1f %10.1f %10.1f",
         internal_op_names[op].c_str(),
         static_cast<int>(
             DumpStats(&internal_op_stats_[op], InternalOpStatsType::COUNT)),
@@ -301,13 +244,112 @@ void TitanInternalStats::DumpInternalOpStats(std::string* value) {
         static_cast<double>(DumpStats(&internal_op_stats_[op],
                                       InternalOpStatsType::IO_BYTES_READ)) /
             GB,
+        static_cast<double>(
+            DumpStats(&internal_op_stats_[op],
+                      InternalOpStatsType::LOOKUP_IO_BYTES_READ)) /
+            GB,
+        static_cast<double>(
+            DumpStats(&internal_op_stats_[op],
+                      InternalOpStatsType::WRITEBACK_IO_BYTES_READ)) /
+            GB,
         static_cast<double>(DumpStats(&internal_op_stats_[op],
                                       InternalOpStatsType::IO_BYTES_WRITTEN)) /
+            GB,
+        static_cast<double>(
+            DumpStats(&internal_op_stats_[op],
+                      InternalOpStatsType::LOOKUP_IO_BYTES_WRITTEN)) /
+            GB,
+        static_cast<double>(
+            DumpStats(&internal_op_stats_[op],
+                      InternalOpStatsType::WRITEBACK_IO_BYTES_WRITTEN)) /
             GB,
         static_cast<int>(DumpStats(&internal_op_stats_[op],
                                    InternalOpStatsType::INPUT_FILE_NUM)),
         static_cast<int>(DumpStats(&internal_op_stats_[op],
                                    InternalOpStatsType::OUTPUT_FILE_NUM)),
+        static_cast<double>(DumpStats(
+            &internal_op_stats_[op], InternalOpStatsType::GC_MICROS)) /
+            SECOND,
+        static_cast<double>(DumpStats(
+            &internal_op_stats_[op], InternalOpStatsType::GC_READ_LSM_MICROS)) /
+            SECOND,
+        static_cast<double>(
+            DumpStats(&internal_op_stats_[op],
+                      InternalOpStatsType::GC_UPDATE_LSM_MICROS)) /
+            SECOND);
+  }
+}
+
+void TitanInternalStats::DumpInternalOpStats(std::string* value) {
+  constexpr double GB = 1.0 * 1024 * 1024 * 1024;
+  constexpr double SECOND = 1.0 * 1000000;
+  char log_buffer[2000];
+  snprintf(
+      log_buffer, sizeof(log_buffer),
+      "OP           COUNT READ(GB)  LSM_READ(GB)  WRITE(GB)  LSM_WRITE(GB)  "
+      "FILE_WRITE(GB)  IO_READ(GB)  LOOKUP_IO_READ(GB)  WRITEBACK_IO_READ(GB)  "
+      "IO_WRITE(GB)  LOOKUP_IO_WRITE(GB)  WRITEBACK_IO_WRITE(GB)  FILE_IN "
+      "FILE_OUT     GC(s) GC_READ(s) GC_UPDATE(s)\n");
+  value->append(log_buffer);
+  snprintf(log_buffer, sizeof(log_buffer),
+           "-------------------------------------------------------------------"
+           "-------------------------------------------------------------------"
+           "-------------------------------------------------------------------"
+           "-------------------------------------------------\n");
+  value->append(log_buffer);
+  for (int op = 0; op < static_cast<int>(InternalOpType::INTERNAL_OP_ENUM_MAX);
+       op++) {
+    snprintf(
+        log_buffer, sizeof(log_buffer),
+        "%s %5d %10.1f  %10.1f  %10.1f  %10.1f  %15.1f  %15.1f  %19.1f  %16.1f "
+        " %15.1f  %19.1f  %16.1f %10d %10d %10.1f %10.1f %10.1f\n",
+        internal_op_names[op].c_str(),
+        static_cast<int>(
+            DumpStats(&internal_op_stats_[op], InternalOpStatsType::COUNT)),
+        static_cast<double>(DumpStats(&internal_op_stats_[op],
+                                      InternalOpStatsType::BYTES_READ)) /
+            GB,
+        static_cast<double>(DumpStats(&internal_op_stats_[op],
+                                      InternalOpStatsType::LSM_BYTES_READ)) /
+            GB,
+        static_cast<double>(DumpStats(&internal_op_stats_[op],
+                                      InternalOpStatsType::BYTES_WRITTEN)) /
+            GB,
+        static_cast<double>(DumpStats(&internal_op_stats_[op],
+                                      InternalOpStatsType::LSM_BYTES_WRITTEN)) /
+            GB,
+        static_cast<double>(DumpStats(
+            &internal_op_stats_[op], InternalOpStatsType::FILE_BYTES_WRITTEN)) /
+            GB,
+        static_cast<double>(DumpStats(&internal_op_stats_[op],
+                                      InternalOpStatsType::IO_BYTES_READ)) /
+            GB,
+        static_cast<double>(
+            DumpStats(&internal_op_stats_[op],
+                      InternalOpStatsType::LOOKUP_IO_BYTES_READ)) /
+            GB,
+        static_cast<double>(
+            DumpStats(&internal_op_stats_[op],
+                      InternalOpStatsType::WRITEBACK_IO_BYTES_READ)) /
+            GB,
+        static_cast<double>(DumpStats(&internal_op_stats_[op],
+                                      InternalOpStatsType::IO_BYTES_WRITTEN)) /
+            GB,
+        static_cast<double>(
+            DumpStats(&internal_op_stats_[op],
+                      InternalOpStatsType::LOOKUP_IO_BYTES_WRITTEN)) /
+            GB,
+        static_cast<double>(
+            DumpStats(&internal_op_stats_[op],
+                      InternalOpStatsType::WRITEBACK_IO_BYTES_WRITTEN)) /
+            GB,
+        static_cast<int>(DumpStats(&internal_op_stats_[op],
+                                   InternalOpStatsType::INPUT_FILE_NUM)),
+        static_cast<int>(DumpStats(&internal_op_stats_[op],
+                                   InternalOpStatsType::OUTPUT_FILE_NUM)),
+        static_cast<double>(DumpStats(&internal_op_stats_[op],
+                                      InternalOpStatsType::GC_MICROS)) /
+            SECOND,
         static_cast<double>(DumpStats(
             &internal_op_stats_[op], InternalOpStatsType::GC_READ_LSM_MICROS)) /
             SECOND,
@@ -323,9 +365,10 @@ void TitanInternalStats::DumpInternalStats(std::string* value) {
   constexpr double SECOND = 1.0 * 1000000;
   char log_buffer[2000];
   snprintf(log_buffer, sizeof(log_buffer),
-           "----------------------------------------------------------------"
-           "----------------------------------------------------------------"
-           "-----------------\n");
+           "-------------------------------------------------------------------"
+           "-------------------------------------------------------------------"
+           "-------------------------------------------------------------------"
+           "-------------------------------------------------\n");
   value->append(log_buffer);
 
   snprintf(log_buffer, sizeof(log_buffer),

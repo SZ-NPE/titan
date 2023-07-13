@@ -78,6 +78,7 @@ class BlobGCJob {
     uint64_t gc_bytes_fallback = 0;
     uint64_t gc_num_new_files = 0;
     uint64_t gc_num_files = 0;
+    uint64_t gc_micros = 0;
     uint64_t gc_read_lsm_micros = 0;
     uint64_t gc_update_lsm_micros = 0;
   } metrics_;
@@ -86,6 +87,10 @@ class BlobGCJob {
   uint64_t prev_bytes_written_ = 0;
   uint64_t io_bytes_read_ = 0;
   uint64_t io_bytes_written_ = 0;
+  uint64_t lookup_io_bytes_read_ = 0;
+  uint64_t lookup_io_bytes_written_ = 0;
+  uint64_t writeback_io_bytes_read_ = 0;
+  uint64_t writeback_io_bytes_written_ = 0;
 
   Status DoRunGC();
   void BatchWriteNewIndices(BlobFileBuilder::OutContexts &contexts, Status *s);
