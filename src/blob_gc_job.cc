@@ -147,7 +147,6 @@ Status BlobGCJob::Run() {
 }
 
 Status BlobGCJob::DoRunGC() {
-  TitanStopWatch sw(env_, metrics_.gc_micros);
   Status s;
 
   std::unique_ptr<BlobFileMergeIterator> gc_iter;
@@ -352,6 +351,8 @@ Status BlobGCJob::BuildIterator(
 
 Status BlobGCJob::DiscardEntry(const Slice& key, const BlobIndex& blob_index,
                                bool* discardable) {
+  StopWatch look_up_sw(env_->GetSystemClock().get(), statistics(stats_),
+                    TITAN_GC_LOOKUP_MICROS);
   TitanStopWatch sw(env_, metrics_.gc_read_lsm_micros);
   assert(discardable != nullptr);
   PinnableSlice index_entry;
@@ -499,6 +500,8 @@ Status BlobGCJob::InstallOutputBlobFiles() {
 }
 
 Status BlobGCJob::RewriteValidKeyToLSM() {
+  StopWatch write_back_sw(env_->GetSystemClock().get(), statistics(stats_),
+                    TITAN_GC_WRITEBACK_MICROS);
   TitanStopWatch sw(env_, metrics_.gc_update_lsm_micros);
   Status s;
   auto* db_impl = reinterpret_cast<DBImpl*>(base_db_);
@@ -662,8 +665,6 @@ void BlobGCJob::UpdateInternalOpStats() {
            metrics_.gc_num_files);
   AddStats(internal_op_stats, InternalOpStatsType::OUTPUT_FILE_NUM,
            metrics_.gc_num_new_files);
-  AddStats(internal_op_stats, InternalOpStatsType::GC_MICROS,
-           metrics_.gc_micros);
   AddStats(internal_op_stats, InternalOpStatsType::GC_READ_LSM_MICROS,
            metrics_.gc_read_lsm_micros);
   AddStats(internal_op_stats, InternalOpStatsType::GC_UPDATE_LSM_MICROS,

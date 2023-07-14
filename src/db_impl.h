@@ -346,6 +346,8 @@ class TitanDBImpl : public TitanDB {
 
   std::atomic_bool shuting_down_{false};
 
+  uint64_t gc_time=0;
+
   std::atomic<uint64_t> stall_cnt{0};
   std::atomic<uint64_t> stall_time{0};
   // mutable port::Mutex stats_mutex_;

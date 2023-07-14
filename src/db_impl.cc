@@ -1179,6 +1179,12 @@ bool TitanDBImpl::GetProperty(ColumnFamilyHandle* column_family,
                stall_time.load(), stall_cnt.load());
       value->append(log_buffer);
     }
+    char log_buffer[2000];
+    snprintf(log_buffer, sizeof(log_buffer),
+              "gc time: %" PRIu64 "\n", gc_time);
+    value->append(log_buffer);
+    value->append(stats_->StatisticsToString());
+
     return true;
   }
   bool s = false;

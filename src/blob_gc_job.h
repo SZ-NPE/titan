@@ -78,7 +78,6 @@ class BlobGCJob {
     uint64_t gc_bytes_fallback = 0;
     uint64_t gc_num_new_files = 0;
     uint64_t gc_num_files = 0;
-    uint64_t gc_micros = 0;
     uint64_t gc_read_lsm_micros = 0;
     uint64_t gc_update_lsm_micros = 0;
   } metrics_;

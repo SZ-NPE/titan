@@ -211,7 +211,7 @@ void TitanInternalStats::DumpInternalOpStats(LogBuffer* log_buffer) {
       "OP           COUNT READ(GB)  LSM_READ(GB)  WRITE(GB)  LSM_WRITE(GB)  "
       "FILE_WRITE(GB)  IO_READ(GB)  LOOKUP_IO_READ(GB)  WRITEBACK_IO_READ(GB)  "
       "IO_WRITE(GB)  LOOKUP_IO_WRITE(GB)  WRITEBACK_IO_WRITE(GB)  FILE_IN "
-      "FILE_OUT GC(s) GC_READ(s) GC_UPDATE(s)");
+      "FILE_OUT GC_READ(s) GC_UPDATE(s)");
   LogToBuffer(log_buffer,
               "----------------------------------------------------------------"
               "----------------------------------------------------------------"
@@ -222,7 +222,7 @@ void TitanInternalStats::DumpInternalOpStats(LogBuffer* log_buffer) {
     LogToBuffer(
         log_buffer,
         "%s %5d %10.1f  %10.1f  %10.1f  %10.1f  %10.1f  %10.1f  %10.1f  %10.1f "
-        " %10.1f  %10.1f  %10.1f %10d %10d %10.1f %10.1f %10.1f",
+        " %10.1f  %10.1f  %10.1f %10d %10d %10.1f %10.1f",
         internal_op_names[op].c_str(),
         static_cast<int>(
             DumpStats(&internal_op_stats_[op], InternalOpStatsType::COUNT)),
@@ -267,9 +267,6 @@ void TitanInternalStats::DumpInternalOpStats(LogBuffer* log_buffer) {
                                    InternalOpStatsType::INPUT_FILE_NUM)),
         static_cast<int>(DumpStats(&internal_op_stats_[op],
                                    InternalOpStatsType::OUTPUT_FILE_NUM)),
-        static_cast<double>(DumpStats(
-            &internal_op_stats_[op], InternalOpStatsType::GC_MICROS)) /
-            SECOND,
         static_cast<double>(DumpStats(
             &internal_op_stats_[op], InternalOpStatsType::GC_READ_LSM_MICROS)) /
             SECOND,
@@ -289,7 +286,7 @@ void TitanInternalStats::DumpInternalOpStats(std::string* value) {
       "OP           COUNT READ(GB)  LSM_READ(GB)  WRITE(GB)  LSM_WRITE(GB)  "
       "FILE_WRITE(GB)  IO_READ(GB)  LOOKUP_IO_READ(GB)  WRITEBACK_IO_READ(GB)  "
       "IO_WRITE(GB)  LOOKUP_IO_WRITE(GB)  WRITEBACK_IO_WRITE(GB)  FILE_IN "
-      "FILE_OUT     GC(s) GC_READ(s) GC_UPDATE(s)\n");
+      "FILE_OUT GC_READ(s) GC_UPDATE(s)\n");
   value->append(log_buffer);
   snprintf(log_buffer, sizeof(log_buffer),
            "-------------------------------------------------------------------"
@@ -302,7 +299,7 @@ void TitanInternalStats::DumpInternalOpStats(std::string* value) {
     snprintf(
         log_buffer, sizeof(log_buffer),
         "%s %5d %10.1f  %10.1f  %10.1f  %10.1f  %15.1f  %15.1f  %19.1f  %16.1f "
-        " %15.1f  %19.1f  %16.1f %10d %10d %10.1f %10.1f %10.1f\n",
+        " %15.1f  %19.1f  %16.1f %10d %10d %10.1f %10.1f\n",
         internal_op_names[op].c_str(),
         static_cast<int>(
             DumpStats(&internal_op_stats_[op], InternalOpStatsType::COUNT)),
@@ -347,9 +344,6 @@ void TitanInternalStats::DumpInternalOpStats(std::string* value) {
                                    InternalOpStatsType::INPUT_FILE_NUM)),
         static_cast<int>(DumpStats(&internal_op_stats_[op],
                                    InternalOpStatsType::OUTPUT_FILE_NUM)),
-        static_cast<double>(DumpStats(&internal_op_stats_[op],
-                                      InternalOpStatsType::GC_MICROS)) /
-            SECOND,
         static_cast<double>(DumpStats(
             &internal_op_stats_[op], InternalOpStatsType::GC_READ_LSM_MICROS)) /
             SECOND,
@@ -396,6 +390,41 @@ void TitanInternalStats::DumpInternalStats(std::string* value) {
 void TitanStats::InitializeCF(uint32_t cf_id,
                               std::shared_ptr<BlobStorage> blob_storage) {
   internal_stats_[cf_id] = std::make_shared<TitanInternalStats>(blob_storage);
+}
+
+std::string TitanStats::StatisticsToString() {
+  const int kTmpStrBufferSize = 200;
+  //   MutexLock lock(&aggregate_lock_);
+  std::string res;
+  res.reserve(20000);
+  for (const auto& t : TitanTickersNameMap) {
+    assert(t.first < TITAN_TICKER_ENUM_MAX);
+    char buffer[kTmpStrBufferSize];
+    snprintf(buffer, kTmpStrBufferSize, "%s COUNT : %" PRIu64 "\n",
+             t.second.c_str(), stats_->getTickerCount(t.first));
+    res.append(buffer);
+  }
+  for (const auto& h : TitanHistogramsNameMap) {
+    assert(h.first < TITAN_HISTOGRAM_ENUM_MAX);
+    char buffer[kTmpStrBufferSize];
+    HistogramData hData;
+    stats_->histogramData(h.first, &hData);
+    // don't handle failures - buffer should always be big enough and arguments
+    // should be provided correctly
+    int ret =
+        snprintf(buffer, kTmpStrBufferSize,
+                 "%s P50 : %f P95 : %f P99 : %f P100 : %f COUNT : %" PRIu64
+                 " SUM : %" PRIu64 "\n",
+                 h.second.c_str(), hData.median, hData.percentile95,
+                 hData.percentile99, hData.max, hData.count, hData.sum);
+    if (ret < 0 || ret >= kTmpStrBufferSize) {
+      assert(false);
+      continue;
+    }
+    res.append(buffer);
+  }
+  res.shrink_to_fit();
+  return res;
 }
 
 }  // namespace titandb

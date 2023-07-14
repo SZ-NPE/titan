@@ -36,7 +36,6 @@ enum class InternalOpStatsType : int {
   WRITEBACK_IO_BYTES_WRITTEN,
   INPUT_FILE_NUM,
   OUTPUT_FILE_NUM,
-  GC_MICROS,
   GC_READ_LSM_MICROS,
   // Update lsm and write callback
   GC_UPDATE_LSM_MICROS,
@@ -174,6 +173,7 @@ class TitanStats {
     }
     return stats_->Reset();
   }
+  std::string StatisticsToString();
 
  private:
   // RocksDB statistics
