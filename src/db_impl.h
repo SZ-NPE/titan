@@ -11,7 +11,7 @@
 #include "table_factory.h"
 #include "titan/db.h"
 #include "titan_stats.h"
-#define WRITE_PERF_STATS
+// #define WRITE_PERF_STATS
 
 namespace rocksdb {
 namespace titandb {
