@@ -204,6 +204,11 @@ Status TitanDBImpl::Open(const std::vector<TitanCFDescriptor>& descs,
     return Status::InvalidArgument("handles must be non-null.");
   }
   Status s = OpenImpl(descs, handles);
+  #ifdef GC_STALL_PATCH
+    TITAN_LOG_INFO(db_options_.info_log, "[GC Stall] Enable gc stall patch");
+  #else
+    TITAN_LOG_INFO(db_options_.info_log, "[GC Stall] Disable gc stall patch");
+  #endif
   // Cleanup after failure.
   if (!s.ok()) {
     if (handles->size() > 0) {
