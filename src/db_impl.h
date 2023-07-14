@@ -3,6 +3,7 @@
 #include "db/db_impl/db_impl.h"
 #include "rocksdb/statistics.h"
 #include "rocksdb/threadpool.h"
+#include "rocksdb/perf_context.h"
 #include "util/repeatable_thread.h"
 
 #include "blob_file_manager.h"
@@ -10,6 +11,7 @@
 #include "table_factory.h"
 #include "titan/db.h"
 #include "titan_stats.h"
+#define WRITE_PERF_STATS
 
 namespace rocksdb {
 namespace titandb {
@@ -352,6 +354,16 @@ class TitanDBImpl : public TitanDB {
   std::atomic<uint64_t> stall_time{0};
   // mutable port::Mutex stats_mutex_;
 
+#ifdef WRITE_PERF_STATS
+  std::atomic<uint64_t> write_wal_time{0};
+  std::atomic<uint64_t> write_memtable_time{0};
+  std::atomic<uint64_t> write_delay_time{0};
+  std::atomic<uint64_t> write_scheduling_flushes_compactions_time{0};
+  std::atomic<uint64_t> write_pre_and_post_process_time{0};
+  std::atomic<uint64_t> write_thread_wait_nanos{0};
+  std::atomic<uint64_t> db_mutex_lock_nanos{0};
+  std::atomic<uint64_t> db_condition_wait_nanos{0};
+#endif
   std::atomic<bool> block_for_size_{false};
   port::CondVar size_cv_;
   mutable port::Mutex size_mutex_;

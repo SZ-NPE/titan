@@ -576,6 +576,10 @@ Status TitanDBImpl::Put(const rocksdb::WriteOptions& options,
                         rocksdb::ColumnFamilyHandle* column_family,
                         const rocksdb::Slice& key,
                         const rocksdb::Slice& value) {
+#ifdef WRITE_PERF_STATS
+  rocksdb::SetPerfLevel(rocksdb::PerfLevel::kEnableTime);
+  rocksdb::get_perf_context()->Reset();
+#endif
   if (HasBGError()) return GetBGError();
   while (db_options_.block_write_size > 0 && block_for_size_.load()) {
     AtomicTitanStopWatch sw(env_, stall_time);
@@ -596,8 +600,25 @@ Status TitanDBImpl::Put(const rocksdb::WriteOptions& options,
       TITAN_LOG_INFO(db_options_.info_log, "GC Stall wait done.");
     }
   }
-  return HasBGError() ? GetBGError()
-                      : db_->Put(options, column_family, key, value);
+
+  Status s = db_->Put(options, column_family, key, value);
+
+#ifdef WRITE_PERF_STATS
+  write_wal_time += rocksdb::get_perf_context()->write_wal_time;
+  write_memtable_time += rocksdb::get_perf_context()->write_memtable_time;
+  write_delay_time += rocksdb::get_perf_context()->write_delay_time;
+  write_scheduling_flushes_compactions_time +=
+      rocksdb::get_perf_context()->write_scheduling_flushes_compactions_time;
+  write_pre_and_post_process_time +=
+      rocksdb::get_perf_context()->write_pre_and_post_process_time;
+  write_thread_wait_nanos +=
+      rocksdb::get_perf_context()->write_thread_wait_nanos;
+  db_mutex_lock_nanos += rocksdb::get_perf_context()->db_mutex_lock_nanos;
+  db_condition_wait_nanos +=
+      rocksdb::get_perf_context()->db_condition_wait_nanos;
+#endif
+
+  return s;
 }
 
 Status TitanDBImpl::Write(const rocksdb::WriteOptions& options,
@@ -1182,6 +1203,30 @@ bool TitanDBImpl::GetProperty(ColumnFamilyHandle* column_family,
     char log_buffer[2000];
     snprintf(log_buffer, sizeof(log_buffer),
               "gc time: %" PRIu64 "\n", gc_time);
+    value->append(log_buffer);
+    snprintf(
+        log_buffer, sizeof(log_buffer),
+        "write_wal_time: %" PRIu64
+        "\n"
+        "write_memtable_time: %" PRIu64
+        "\n"
+        "write_delay_time: %" PRIu64
+        "\n"
+        "write_scheduling_flushes_compactions_time: %" PRIu64
+        "\n"
+        "write_pre_and_post_process_time: %" PRIu64
+        "\n"
+        "write_thread_wait_nanos: %" PRIu64
+        "\n"
+        "db_mutex_lock_nanos: %" PRIu64
+        "\n"
+        "db_condition_wait_nanos: %" PRIu64 "\n",
+        write_wal_time.load(), write_memtable_time.load(),
+        write_delay_time.load(),
+        write_scheduling_flushes_compactions_time.load(),
+        write_pre_and_post_process_time.load(), write_thread_wait_nanos.load(),
+        db_mutex_lock_nanos.load(), db_condition_wait_nanos.load());
+
     value->append(log_buffer);
     value->append(stats_->StatisticsToString());
 
