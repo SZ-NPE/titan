@@ -34,7 +34,7 @@ std::unique_ptr<BlobGC> BasicBlobGCPicker::PickBlobGC(
   uint64_t next_gc_size = 0;
   for (auto& gc_score : blob_storage->gc_score()) {
 
-  #ifdef GC_STALL_PATCH
+#ifdef GC_STALL_PATCH
     uint64_t live_size = 0;
     uint64_t total_size = 0;
     stats_->internal_stats(column_family_id_)
@@ -42,15 +42,15 @@ std::unique_ptr<BlobGC> BasicBlobGCPicker::PickBlobGC(
     stats_->internal_stats(column_family_id_)
         ->GetIntProperty("rocksdb.titandb.live-blob-file-size", &total_size);
     if (gc_score.score < cf_options_.blob_file_discardable_ratio &&
-        (db_options_.block_write_size == 0 || gc_score.score < 0 ||
+        (db_options_.block_write_size == 0 || gc_score.score < 1e-15 ||
          total_size < db_options_.block_write_size)) {
       break;
     }
-  #else
+#else
     if (gc_score.score < cf_options_.blob_file_discardable_ratio) {
       break;
     }
-  #endif
+#endif
     
     auto blob_file = blob_storage->FindFile(gc_score.file_number).lock();
     if (!CheckBlobFile(blob_file.get())) {

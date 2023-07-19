@@ -221,7 +221,8 @@ Status TitanDBImpl::BackgroundGC(LogBuffer* log_buffer,
     uint64_t live_size = 0;
     GetIntProperty("rocksdb.titandb.live-blob-file-size", &total_size);
     GetIntProperty("rocksdb.titandb.live-blob-size", &live_size);
-    if (block_for_size_.load() && total_size < db_options_.block_write_size) {
+    if (db_options_.block_write_size > 0 && block_for_size_.load() &&
+        total_size < db_options_.block_write_size) {
       MutexLock l(&size_mutex_);
       TITAN_LOG_INFO(
                 db_options_.info_log,
@@ -231,7 +232,12 @@ Status TitanDBImpl::BackgroundGC(LogBuffer* log_buffer,
       size_cv_.SignalAll();
     }
 
-    if (blob_gc->trigger_next() &&
+    if (db_options_.block_write_size > 0 && block_for_size_.load()) {
+      TITAN_LOG_INFO(db_options_.info_log, "GC complete, GC still stall with total_size %" PRIu64,
+                     total_size);
+    }
+
+    if ((blob_gc->trigger_next() || block_for_size_.load()) &&
         (bg_gc_scheduled_ - 1 + gc_queue_.size() <
          2 * static_cast<uint32_t>(db_options_.max_background_gc))) {
       RecordTick(statistics(stats_.get()), TITAN_GC_TRIGGER_NEXT, 1);

@@ -1209,6 +1209,7 @@ bool TitanDBImpl::GetProperty(ColumnFamilyHandle* column_family,
     snprintf(log_buffer, sizeof(log_buffer),
               "gc time: %" PRIu64 "\n", gc_time);
     value->append(log_buffer);
+#ifdef WRITE_PERF_STATS
     snprintf(
         log_buffer, sizeof(log_buffer),
         "write_wal_time: %" PRIu64
@@ -1233,6 +1234,7 @@ bool TitanDBImpl::GetProperty(ColumnFamilyHandle* column_family,
         db_mutex_lock_nanos.load(), db_condition_wait_nanos.load());
 
     value->append(log_buffer);
+#endif
     value->append(stats_->StatisticsToString());
 
     return true;
