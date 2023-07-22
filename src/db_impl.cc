@@ -595,6 +595,7 @@ Status TitanDBImpl::Put(const rocksdb::WriteOptions& options,
       uint32_t cf_id = column_family->GetID();
       auto bs = blob_file_set_->GetBlobStorage(cf_id).lock();
       bs->ComputeGCScore();
+      MutexLock sl(&mutex_);
       AddToGCQueue(cf_id);
       MaybeScheduleGC();
     }
