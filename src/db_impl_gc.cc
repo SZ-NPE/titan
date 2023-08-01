@@ -177,10 +177,17 @@ Status TitanDBImpl::BackgroundGC(LogBuffer* log_buffer,
                      cf_info_[column_family_id].name.c_str());
   }
   if (blob_storage != nullptr) {
+    uint64_t total_size = 0;
+    uint64_t blob_total_size = 0;
+    uint64_t sst_total_size = 0;
+    GetIntProperty("rocksdb.titandb.live-blob-file-size", &blob_total_size);
+    GetIntProperty("rocksdb.live-sst-files-size", &sst_total_size);
+    total_size = blob_total_size + sst_total_size;
     const auto& cf_options = blob_storage->cf_options();
     std::shared_ptr<BlobGCPicker> blob_gc_picker =
-        std::make_shared<BasicBlobGCPicker>(db_options_, cf_options,
-                                            stats_.get(), column_family_id);
+        std::make_shared<BasicBlobGCPicker>(
+            db_options_, cf_options, stats_.get(), column_family_id,
+            total_size > db_options_.block_write_size);
     blob_gc = blob_gc_picker->PickBlobGC(blob_storage.get());
 
     if (blob_gc) {
@@ -217,10 +224,16 @@ Status TitanDBImpl::BackgroundGC(LogBuffer* log_buffer,
     }
     blob_gc->ReleaseGcFiles();
 
+    // uint64_t total_size = 0;
+    // uint64_t live_size = 0;
+    // GetIntProperty("rocksdb.titandb.live-blob-file-size", &total_size);
+    // GetIntProperty("rocksdb.titandb.live-blob-size", &live_size);
     uint64_t total_size = 0;
-    uint64_t live_size = 0;
-    GetIntProperty("rocksdb.titandb.live-blob-file-size", &total_size);
-    GetIntProperty("rocksdb.titandb.live-blob-size", &live_size);
+    uint64_t blob_total_size = 0;
+    uint64_t sst_total_size = 0;
+    GetIntProperty("rocksdb.titandb.live-blob-file-size", &blob_total_size);
+    GetIntProperty("rocksdb.live-sst-files-size", &sst_total_size);
+    total_size = blob_total_size + sst_total_size;
     if (db_options_.block_write_size > 0 && block_for_size_.load() &&
         total_size < db_options_.block_write_size) {
       MutexLock l(&size_mutex_);

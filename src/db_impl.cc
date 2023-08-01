@@ -1527,10 +1527,16 @@ void TitanDBImpl::OnCompactionCompleted(
         AddStats(stats_.get(), compaction_job_info.cf_id, after, 1);
       }
     }
-    uint64_t live_size = 0;
+    // uint64_t live_size = 0;
+    // uint64_t total_size = 0;
+    // GetIntProperty("rocksdb.titandb.live-blob-size", &live_size);
+    // GetIntProperty("rocksdb.titandb.live-blob-file-size", &total_size);
     uint64_t total_size = 0;
-    GetIntProperty("rocksdb.titandb.live-blob-size", &live_size);
-    GetIntProperty("rocksdb.titandb.live-blob-file-size", &total_size);
+    uint64_t blob_total_size = 0;
+    uint64_t sst_total_size = 0;
+    GetIntProperty("rocksdb.titandb.live-blob-file-size", &blob_total_size);
+    GetIntProperty("rocksdb.live-sst-files-size", &sst_total_size);
+    total_size = blob_total_size + sst_total_size;
     if (db_options_.block_write_size > 0) {
       if (total_size > db_options_.block_write_size) {
         TITAN_LOG_INFO(
