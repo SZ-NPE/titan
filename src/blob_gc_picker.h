@@ -29,7 +29,8 @@ class BlobGCPicker {
 
 class BasicBlobGCPicker final : public BlobGCPicker {
  public:
-  BasicBlobGCPicker(TitanDBOptions, TitanCFOptions, TitanStats*, uint32_t);
+  BasicBlobGCPicker(TitanDBOptions, TitanCFOptions, TitanStats*, uint32_t,
+                    bool);
   ~BasicBlobGCPicker();
 
   std::unique_ptr<BlobGC> PickBlobGC(BlobStorage* blob_storage) override;
@@ -39,6 +40,7 @@ class BasicBlobGCPicker final : public BlobGCPicker {
   TitanCFOptions cf_options_;
   TitanStats* stats_;
   uint32_t column_family_id_;
+  bool ignore_garbage_ratio_;
 
   // Check if blob_file needs to gc, return true means we need pick this
   // file for gc

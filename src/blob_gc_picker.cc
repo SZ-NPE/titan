@@ -14,11 +14,13 @@ namespace titandb {
 BasicBlobGCPicker::BasicBlobGCPicker(TitanDBOptions db_options,
                                      TitanCFOptions cf_options,
                                      TitanStats* stats,
-                                     uint32_t column_family_id)
+                                     uint32_t column_family_id,
+                                     bool ignore_garbage_ratio = false)
     : db_options_(db_options),
       cf_options_(cf_options),
       stats_(stats),
-      column_family_id_(column_family_id) {}
+      column_family_id_(column_family_id),
+      ignore_garbage_ratio_(ignore_garbage_ratio) {}
 
 BasicBlobGCPicker::~BasicBlobGCPicker() {}
 
@@ -35,15 +37,9 @@ std::unique_ptr<BlobGC> BasicBlobGCPicker::PickBlobGC(
   for (auto& gc_score : blob_storage->gc_score()) {
 
 #ifdef GC_STALL_PATCH
-    uint64_t live_size = 0;
-    uint64_t total_size = 0;
-    stats_->internal_stats(column_family_id_)
-        ->GetIntProperty("rocksdb.titandb.live-blob-size", &live_size);
-    stats_->internal_stats(column_family_id_)
-        ->GetIntProperty("rocksdb.titandb.live-blob-file-size", &total_size);
     if (gc_score.score < cf_options_.blob_file_discardable_ratio &&
         (db_options_.block_write_size == 0 || gc_score.score < 1e-15 ||
-         total_size < db_options_.block_write_size)) {
+         !ignore_garbage_ratio_)) {
       break;
     }
 #else
