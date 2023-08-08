@@ -37,9 +37,21 @@ std::unique_ptr<BlobGC> BasicBlobGCPicker::PickBlobGC(
   for (auto& gc_score : blob_storage->gc_score()) {
 
 #ifdef GC_STALL_PATCH
-    if (gc_score.score < cf_options_.blob_file_discardable_ratio &&
-        (db_options_.block_write_size == 0 || gc_score.score < 1e-15 ||
-         !ignore_garbage_ratio_)) {
+    if(ignore_garbage_ratio_)
+    {
+      if (gc_score.score < 1e-15){
+        TITAN_LOG_INFO(
+            db_options_.info_log,
+            "[GC STALL] GC pass blob file because of the gc score %lf < 1e-15.",
+            gc_score.score);
+        break;
+      }
+      TITAN_LOG_INFO(db_options_.info_log, "[GC STALL] GC ignores garbage ratio.");
+    } else if (gc_score.score < cf_options_.blob_file_discardable_ratio) {
+      TITAN_LOG_INFO(db_options_.info_log,
+                     "[GC] GC pass blob file because of the gc score %lf "
+                     "< blob_file_discardable_ratio.",
+                     gc_score.score);
       break;
     }
 #else
