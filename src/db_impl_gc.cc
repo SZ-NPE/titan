@@ -187,7 +187,8 @@ Status TitanDBImpl::BackgroundGC(LogBuffer* log_buffer,
     std::shared_ptr<BlobGCPicker> blob_gc_picker =
         std::make_shared<BasicBlobGCPicker>(
             db_options_, cf_options, stats_.get(), column_family_id,
-            total_size > db_options_.block_write_size);
+            db_options_.block_write_size > 0 &&
+                total_size > db_options_.block_write_size);
     blob_gc = blob_gc_picker->PickBlobGC(blob_storage.get());
 
     if (blob_gc) {
