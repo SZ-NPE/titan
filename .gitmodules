@@ -1,3 +1,4 @@
-[submodule "third-party/rocksdb"]
-	path = third-party/rocksdb
-	url = https://github.com/tikv/rocksdb.git
+[submodule "third-party/rocksdb-tikv"]
+	path = third-party/rocksdb-tikv
+	url = https://github.com/SZ-NPE/rocksdb-tikv.git
+	branch = TestEnv
