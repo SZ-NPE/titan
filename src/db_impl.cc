@@ -48,8 +48,10 @@ class TitanDBImpl::FileManager : public BlobFileManager {
       if (!s.ok()) return s;
 
       f->SetIOPriority(pri);
-      file.reset(new WritableFileWriter(std::move(f), name,
-                                        FileOptions(db_->env_options_)));
+      file.reset(new WritableFileWriter(
+          std::move(f), name, FileOptions(db_->env_options_),
+          db_->env_->GetSystemClock().get() /*clock*/, nullptr /*io_tracer*/,
+          db_->stats_.get()->statistics() /*stats*/));
     }
 
     handle->reset(new FileHandle(number, name, std::move(file)));
@@ -581,6 +583,7 @@ Status TitanDBImpl::Put(const rocksdb::WriteOptions& options,
                         rocksdb::ColumnFamilyHandle* column_family,
                         const rocksdb::Slice& key,
                         const rocksdb::Slice& value) {
+  DBOperationTypeGuard op_guard(kOpTypeFG);
 #ifdef WRITE_PERF_STATS
   rocksdb::SetPerfLevel(rocksdb::PerfLevel::kEnableTime);
   rocksdb::get_perf_context()->Reset();
@@ -671,6 +674,7 @@ Status TitanDBImpl::Flush(const rocksdb::FlushOptions& options,
 
 Status TitanDBImpl::Get(const ReadOptions& options, ColumnFamilyHandle* handle,
                         const Slice& key, PinnableSlice* value) {
+  DBOperationTypeGuard op_guard(kOpTypeFG);
   if (options.snapshot) {
     return GetImpl(options, handle, key, value);
   }
@@ -738,6 +742,7 @@ Status TitanDBImpl::GetImpl(const ReadOptions& options,
 std::vector<Status> TitanDBImpl::MultiGet(
     const ReadOptions& options, const std::vector<ColumnFamilyHandle*>& handles,
     const std::vector<Slice>& keys, std::vector<std::string>* values) {
+  DBOperationTypeGuard op_guard(kOpTypeFG);
   auto options_copy = options;
   options_copy.total_order_seek = true;
   if (options_copy.snapshot) {

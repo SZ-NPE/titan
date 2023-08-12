@@ -116,6 +116,7 @@ void TitanDBImpl::MaybeScheduleGC() {
 }
 
 void TitanDBImpl::BGWorkGC(void* db) {
+  DBOperationTypeGuard op_guard(kOpTypeGC);
   reinterpret_cast<TitanDBImpl*>(db)->BackgroundCallGC();
 }
 

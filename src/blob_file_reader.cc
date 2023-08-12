@@ -34,9 +34,9 @@ Status NewBlobFileReader(uint64_t file_number, uint64_t readahead_size,
     file = NewReadaheadRandomAccessFile(std::move(file), readahead_size);
   }
   result->reset(new RandomAccessFileReader(
-      std::move(file), file_name, nullptr /*clock*/, nullptr /*io_tracer*/,
-      nullptr /*stats*/, 0 /*hist_type*/, nullptr /*file_read_hist*/,
-      env_options.rate_limiter));
+      std::move(file), file_name, env->GetSystemClock().get() /*clock*/,
+      nullptr /*io_tracer*/, db_options.statistics.get() /*stats*/,
+      0 /*hist_type*/, nullptr /*file_read_hist*/, env_options.rate_limiter));
   return s;
 }
 

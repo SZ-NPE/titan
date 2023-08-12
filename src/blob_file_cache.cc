@@ -75,7 +75,9 @@ Status BlobFileCache::FindFile(uint64_t file_number, uint64_t file_size,
     if (db_options_.advise_random_on_open) {
       f->Hint(FSRandomAccessFile::kRandom);
     }
-    file.reset(new RandomAccessFileReader(std::move(f), file_name));
+    file.reset(new RandomAccessFileReader(
+        std::move(f), file_name, env_->GetSystemClock().get() /*clock*/,
+        nullptr /*io_tracer*/, db_options_.statistics.get() /*stats*/));
   }
 
   std::unique_ptr<BlobFileReader> reader;

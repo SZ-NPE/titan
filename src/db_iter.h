@@ -41,7 +41,10 @@ class TitanDBIterator : public Iterator {
                       files_.size());
   }
 
-  bool Valid() const override { return iter_->Valid() && status_.ok(); }
+  bool Valid() const override {
+    DBOperationTypeGuard op_guard(kOpTypeFG);
+    return iter_->Valid() && status_.ok();
+  }
 
   Status status() const override {
     // assume volatile inner iter
@@ -53,6 +56,7 @@ class TitanDBIterator : public Iterator {
   }
 
   void SeekToFirst() override {
+    DBOperationTypeGuard op_guard(kOpTypeFG);
     iter_->SeekToFirst();
     if (ShouldGetBlobValue()) {
       StopWatch seek_sw(clock_, statistics(stats_), TITAN_SEEK_MICROS);
@@ -62,6 +66,7 @@ class TitanDBIterator : public Iterator {
   }
 
   void SeekToLast() override {
+    DBOperationTypeGuard op_guard(kOpTypeFG);
     iter_->SeekToLast();
     if (ShouldGetBlobValue()) {
       StopWatch seek_sw(clock_, statistics(stats_), TITAN_SEEK_MICROS);
@@ -71,6 +76,7 @@ class TitanDBIterator : public Iterator {
   }
 
   void Seek(const Slice &target) override {
+    DBOperationTypeGuard op_guard(kOpTypeFG);
     iter_->Seek(target);
     if (ShouldGetBlobValue()) {
       StopWatch seek_sw(clock_, statistics(stats_), TITAN_SEEK_MICROS);
@@ -80,6 +86,7 @@ class TitanDBIterator : public Iterator {
   }
 
   void SeekForPrev(const Slice &target) override {
+    DBOperationTypeGuard op_guard(kOpTypeFG);
     iter_->SeekForPrev(target);
     if (ShouldGetBlobValue()) {
       StopWatch seek_sw(clock_, statistics(stats_), TITAN_SEEK_MICROS);
@@ -89,6 +96,7 @@ class TitanDBIterator : public Iterator {
   }
 
   void Next() override {
+    DBOperationTypeGuard op_guard(kOpTypeFG);
     assert(Valid());
     iter_->Next();
     if (ShouldGetBlobValue()) {
@@ -99,6 +107,7 @@ class TitanDBIterator : public Iterator {
   }
 
   void Prev() override {
+    DBOperationTypeGuard op_guard(kOpTypeFG);
     assert(Valid());
     iter_->Prev();
     if (ShouldGetBlobValue()) {
@@ -109,11 +118,13 @@ class TitanDBIterator : public Iterator {
   }
 
   Slice key() const override {
+    DBOperationTypeGuard op_guard(kOpTypeFG);
     assert(Valid());
     return iter_->key();
   }
 
   Slice value() const override {
+    DBOperationTypeGuard op_guard(kOpTypeFG);
     assert(Valid() && !options_.key_only);
     if (options_.key_only) return Slice();
     if (!iter_->IsBlob()) return iter_->value();
@@ -121,6 +132,7 @@ class TitanDBIterator : public Iterator {
   }
 
   bool seqno(SequenceNumber *number) const override {
+    DBOperationTypeGuard op_guard(kOpTypeFG);
     return iter_->seqno(number);
   }
 
