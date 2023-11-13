@@ -145,6 +145,16 @@ class BlobStorage {
 
   void SetBlobRunMode(TitanBlobRunMode mode) { blob_run_mode_.store(mode); }
 
+  void CaculateBlobStats(uint64_t& total_size,uint64_t& garbage_size)
+  {
+    total_size = 0;
+    garbage_size = 0;
+    for (auto& file : files_) {
+      total_size += file.second->file_size();
+      garbage_size += file.second->garbage_data_size();
+    }
+  }
+
  private:
   friend class BlobFileSet;
   friend class VersionTest;

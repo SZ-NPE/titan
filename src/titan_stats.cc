@@ -364,6 +364,15 @@ void TitanInternalStats::DumpInternalStats(std::string* value) {
            "-------------------------------------------------------------------"
            "-------------------------------------------------\n");
   value->append(log_buffer);
+  uint64_t total_size = 0;
+  uint64_t garbage_size = 0;
+  blob_storage_->CaculateBlobStats(total_size, garbage_size);
+  snprintf(
+      log_buffer, sizeof(log_buffer),
+      "Blob total size: %.2f GB, garbage size: %.2f GB, garbage ratio: %.2f \n",
+      total_size / GB, garbage_size / GB,
+      total_size > 0 ? static_cast<double>(garbage_size) / total_size : 0);
+  value->append(log_buffer);
 
   snprintf(log_buffer, sizeof(log_buffer),
            "LIVE_BLOB_SIZE(GB): %.2f"

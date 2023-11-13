@@ -243,6 +243,7 @@ class BlobFileMeta {
   uint64_t file_number() const { return file_number_; }
   uint64_t file_size() const { return file_size_; }
   uint64_t live_data_size() const { return live_data_size_; }
+  uint64_t garbage_data_size() const { return file_size_ - live_data_size_; }
   uint32_t file_level() const { return file_level_; }
   const std::string& smallest_key() const { return smallest_key_; }
   const std::string& largest_key() const { return largest_key_; }

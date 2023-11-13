@@ -1595,6 +1595,7 @@ void TitanDBImpl::DumpStats() {
   if (stats_ == nullptr) {
     return;
   }
+  db_impl_->DumpStats();
   LogBuffer log_buffer(InfoLogLevel::HEADER_LEVEL, db_options_.info_log.get());
   {
     MutexLock l(&mutex_);
@@ -1606,9 +1607,14 @@ void TitanDBImpl::DumpStats() {
                        cf.second.name.c_str());
         continue;
       }
-      LogToBuffer(&log_buffer, "Titan internal stats for column family [%s]:",
-                  cf.second.name.c_str());
-      internal_stats->DumpInternalOpStats(&log_buffer);
+
+      std::string value;
+      // internal_stats->DumpInternalOpStats(&log_buffer);
+      internal_stats->DumpInternalOpStats(&value);
+      internal_stats->DumpInternalStats(&value);
+      LogToBuffer(&log_buffer, value.size() + 100,
+                  "Titan internal stats for column family [%s]:\n %s",
+                  cf.second.name.c_str(), value.c_str());
     }
   }
   log_buffer.FlushBufferToLog();
