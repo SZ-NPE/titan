@@ -170,13 +170,24 @@ Status BlobGCJob::DoRunGC() {
   //  uint64_t total_entry_num = 0;
   //  uint64_t total_entry_size = 0;
 
+  // uint64_t total_gc_time = 0;
+  // uint64_t getkey_time = 0;
+  // uint64_t read_time = 0;
+  // uint64_t write_time = 0;
+  // uint64_t total_gc_count = 0;
+  // uint64_t getkey_count = 0;
+  // uint64_t read_count = 0;
+  // uint64_t write_count = 0;
+
   uint64_t file_size = 0;
 
   std::string last_key;
   bool last_key_is_fresh = false;
   gc_iter->SeekToFirst();
   assert(gc_iter->Valid());
-  for (; gc_iter->Valid(); gc_iter->Next()) {
+  // for (; gc_iter->Valid(); gc_iter->Next()) {
+  for (; gc_iter->Valid(); ) {
+
     if (IsShutingDown()) {
       s = Status::ShutdownInProgress();
       break;
@@ -190,6 +201,11 @@ Status BlobGCJob::DoRunGC() {
         // We only need to rewrite the newest version. Blob files containing
         // the older versions will not be purged if there's a snapshot
         // referencing them.
+        {
+          StopWatch gc_read_sw(env_->GetSystemClock().get(), statistics(stats_),
+                          TITAN_GC_READ_MICROS);
+          gc_iter->Next();
+        }
         continue;
       }
     } else {
@@ -205,6 +221,11 @@ Status BlobGCJob::DoRunGC() {
     if (discardable) {
       metrics_.gc_num_keys_overwritten++;
       metrics_.gc_bytes_overwritten += blob_index.blob_handle.size;
+      {
+        StopWatch gc_read_sw(env_->GetSystemClock().get(), statistics(stats_),
+                        TITAN_GC_READ_MICROS);
+        gc_iter->Next();
+      }
       continue;
     }
     last_key_is_fresh = true;
@@ -222,6 +243,11 @@ Status BlobGCJob::DoRunGC() {
       if (!s.ok()) {
         break;
       } else {
+        {
+          StopWatch gc_read_sw(env_->GetSystemClock().get(), statistics(stats_),
+                          TITAN_GC_READ_MICROS);
+          gc_iter->Next();
+        }
         continue;
       }
     }
@@ -269,12 +295,21 @@ Status BlobGCJob::DoRunGC() {
     ctx->new_blob_index.file_number = blob_file_handle->GetNumber();
 
     BlobFileBuilder::OutContexts contexts;
-    blob_file_builder->Add(blob_record, std::move(ctx), &contexts);
-
+    {
+      StopWatch gc_write_sw(env_->GetSystemClock().get(), statistics(stats_),
+                    TITAN_GC_WRITE_MICROS);
+      blob_file_builder->Add(blob_record, std::move(ctx), &contexts);
+    }
     BatchWriteNewIndices(contexts, &s);
 
     if (!s.ok()) {
       break;
+    }
+
+    {
+      StopWatch gc_read_sw(env_->GetSystemClock().get(), statistics(stats_),
+                      TITAN_GC_READ_MICROS);
+      gc_iter->Next();
     }
   }
 

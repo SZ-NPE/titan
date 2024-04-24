@@ -106,7 +106,9 @@ enum HistogramType : uint32_t {
   TITAN_MANIFEST_FILE_SYNC_MICROS,
 
   TITAN_GC_MICROS,
+  TITAN_GC_READ_MICROS,
   TITAN_GC_LOOKUP_MICROS,
+  TITAN_GC_WRITE_MICROS,
   TITAN_GC_WRITEBACK_MICROS,
   TITAN_GC_INPUT_FILE_SIZE,
   TITAN_GC_OUTPUT_FILE_SIZE,
@@ -130,7 +132,9 @@ const std::vector<std::pair<HistogramType, std::string>>
         {TITAN_MANIFEST_FILE_SYNC_MICROS, "titandb.manifest.file.sync.micros"},
 
         {TITAN_GC_MICROS, "titandb.gc.micros"},
+        {TITAN_GC_READ_MICROS, "titandb.gc.read.micros"},
         {TITAN_GC_LOOKUP_MICROS, "titandb.gc.lookup.micros"},
+        {TITAN_GC_WRITE_MICROS, "titandb.gc.write.micros"},
         {TITAN_GC_WRITEBACK_MICROS, "titandb.gc.writeback.micros"},
         {TITAN_GC_INPUT_FILE_SIZE, "titandb.gc.input.file.size"},
         {TITAN_GC_OUTPUT_FILE_SIZE, "titandb.gc.output.file.size"},
